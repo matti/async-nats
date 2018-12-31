@@ -48,3 +48,10 @@ def group(which, &block)
   puts "## group:end #{which}".colorize(:light_green)
   puts ""
 end
+
+def wait_until_size(obj_responds_to_size, expected)
+  loop do
+    break if obj_responds_to_size.size == expected
+    Async::Task.current.sleep 0.1
+  end
+end

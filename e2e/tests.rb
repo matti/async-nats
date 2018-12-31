@@ -1,3 +1,9 @@
 require_relative "helper"
 
-require_relative "tests/all.rb"
+for test in Dir.glob(
+  File.expand_path(
+    File.join(__dir__, "tests", "**", "*.rb")
+  )
+) do
+  load test
+end

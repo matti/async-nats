@@ -111,26 +111,3 @@ Async::Reactor.run do |task|
   client.flush!
   client.stop!
 end
-
-test "east oriented" do
-  pongs = []
-  client.on!(:pong) do |now|
-    pongs << now
-  end
-
-  group "reactor" do
-    Async::Reactor.run do
-      test "client.start!.ping.ping.stop!", binding
-    end
-    assert pongs.size, 2
-  end
-
-  group "reactorless" do
-    pongs = []
-    client.start! do
-      test "client.ping.ping", binding
-    end
-
-    assert pongs.size, 2
-  end
-end

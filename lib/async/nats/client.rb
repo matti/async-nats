@@ -18,7 +18,7 @@ module Async
         @read_task = nil
         @write_task = nil
 
-        @pongs = Async::Queue.new
+        @pong = Async::Notification.new
 
         @subscriptions = {}
 
@@ -42,14 +42,14 @@ module Async
 
         ensure_connection_and_tasks_when_in_reactor_and_no_block = Async::Notification.new if Async::Task.current? && block.nil?
 
-        Async::Reactor.run do
+        Async::Reactor.run do |task|
           @server_info, @connection, @stream, @line_protocol = __connect
 
           @read_task = __read_task
           @write_task = __write_task
 
           if block
-            block.call
+            block.call task
             stop!
           else
             ensure_connection_and_tasks_when_in_reactor_and_no_block.signal if ensure_connection_and_tasks_when_in_reactor_and_no_block
@@ -59,24 +59,27 @@ module Async
         self
       end
 
-      def ping
-        __call "PING", wait: true
-        @pongs.dequeue
+      def ping(wait:false)
+        __call "PING", wait: wait
+        if wait
+          @pong.wait
+        end
+
         self
       end
 
-      def pub(subject, reply_to_or_msg, msg=nil)
+      def pub(subject, reply_to_or_msg, msg=nil, wait: false)
         payload = if msg
           msg.to_s
         else
           reply_to_or_msg.to_s
         end
 
-        __call "PUB #{subject} #{payload.size}\n#{payload}"
+        __call "PUB #{subject} #{payload.size}\n#{payload}", wait: wait
         self
       end
 
-      def sub(subject, queue_group: nil, sid: nil, &block)
+      def sub(subject, queue_group: nil, sid: nil, wait: false, &block)
         sid = SecureRandom.uuid unless sid
         @subscriptions[sid] = block
 
@@ -86,7 +89,7 @@ module Async
           "SUB #{subject} #{sid}"
         end
 
-        __call sub_msg
+        __call sub_msg, wait: wait
 
         sid
       end
@@ -166,7 +169,7 @@ module Async
                 @subscriptions[uuid].call payload
               end
             when "PONG"
-              @pongs.enqueue Time.now
+              @pong.signal
               __fire :pong, Time.now
             when "+OK"
               __fire :ok, Time.now
