@@ -7,3 +7,5 @@ for test in Dir.glob(
 ) do
   load test
 end
+
+puts "tests ok"
