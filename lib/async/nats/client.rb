@@ -80,7 +80,13 @@ module Async
         sid = SecureRandom.uuid unless sid
         @subscriptions[sid] = block
 
-        __call "SUB #{subject} #{sid}"
+        sub_msg = if queue_group
+          "SUB #{subject} #{queue_group} #{sid}"
+        else
+          "SUB #{subject} #{sid}"
+        end
+
+        __call sub_msg
 
         sid
       end
@@ -133,7 +139,7 @@ module Async
         line_protocol = Async::IO::Protocol::Line.new(stream, "\r\n")
 
         info = line_protocol.read_line
-
+        p info
         _, json, = info.split /^INFO (.*)/
         info = JSON.parse(json)
 
@@ -183,10 +189,10 @@ module Async
 
       def __write_task
         Async::Task.current.async do
-          while msg = @write_queue.dequeue do
+          while (uuid, msg = @write_queue.dequeue) do
             p ["->", msg]
-            @line_protocol.write_lines msg.last
-            @notifications[msg.first].signal if msg.first
+            @line_protocol.write_lines msg
+            @notifications[uuid].signal if uuid
           end
         end
       end

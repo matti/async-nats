@@ -12,9 +12,11 @@ Usage without `Async::Reactor`
 
 Usage with `Async::Reactor`
 
+        require "async/nats"
+
         client = Async::Nats::Client.new
 
-        Async::Reactor.run
+        Async::Reactor.run do
           client.start!
           client.ping
           client.stop!
@@ -22,12 +24,14 @@ Usage with `Async::Reactor`
 
 Pub/Sub
 
+        require "async/nats"
+
         client = Async::Nats::Client.new
 
         client.start! do
           done = Async::Notification.new
           client.sub "greetings" do |g|
-            puts "Got: #{g}
+            puts "Got: #{g}"
             done.signal
           end
 

@@ -70,6 +70,36 @@ RSpec.describe Async::Nats::Client do
         done.wait
         expect(got).to eq "Invalid Subject"
       end
+
+      describe "queue_groups" do
+        it do
+          a = []
+          client.sub "queue_group", queue_group: "all" do
+            a << true
+          end
+
+          b = []
+          client.sub "queue_group", queue_group: "all" do
+            b << true
+          end
+
+          10.times do
+            client.pub "queue_group", true
+          end
+
+          loop do
+            break if (a+b).size == 10
+            Async::Task.current.sleep 0.1
+          end
+          expect(a.size).to be > 0
+          expect(b.size).to be > 0
+
+          expect(a.size).to be < 10
+          expect(b.size).to be < 10
+
+          expect((a+b).size).to eq 10
+        end
+      end
     end
   end
 end
